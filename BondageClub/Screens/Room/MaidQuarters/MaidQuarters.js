@@ -20,10 +20,11 @@ var MaidQuartersCurrentRescueCompleted = false;
 
 // Returns TRUE if the player is dressed in a maid uniform or can take a specific chore
 function MaidQuartersPlayerInMaidUniform() { return ((CharacterAppearanceGetCurrentValue(Player, "Cloth", "Name") == "MaidOutfit1") && (CharacterAppearanceGetCurrentValue(Player, "Hat", "Name") == "MaidHairband1")) }
-function MaidQuartersAllowMaidDrinks() { return (!Player.IsRestrained() && !MaidQuartersMaid.IsRestrained()); }
-function MaidQuartersAllowMaidCleaning() { return (!Player.IsRestrained() && !MaidQuartersMaid.IsRestrained()); }
+function MaidQuartersAllowMaidDrinks() { return (!Player.IsRestrained() && !MaidQuartersMaid.IsRestrained() && !LogQuery("ClubMistress", "Management")); }
+function MaidQuartersAllowMaidCleaning() { return (!Player.IsRestrained() && !MaidQuartersMaid.IsRestrained() && !LogQuery("ClubMistress", "Management")); }
 function MaidQuartersAllowRescue() { return (!Player.IsRestrained()); }
 function MaidQuartersAllowCancelRescue() { return (MaidQuartersCurrentRescueStarted && !MaidQuartersCurrentRescueCompleted); }
+function MaidQuartersCanFreeSarah() { return (SarahUnlockQuest && LogQuery("LeadSorority", "Maid")) }
 
 // Loads the maid quarters room
 function MaidQuartersLoad() {
@@ -106,7 +107,7 @@ function MaidQuartersMiniGameEnd() {
 // When the mini game / maid chore is successful, the player gets paid
 function MaidQuartersMiniGamePay() {
 	ReputationProgress("Maid", 4);
-	var M = 8;
+	var M = 10;
 	if (MiniGameDifficulty == "Normal") M = M * 1.5;
 	if (MiniGameDifficulty == "Hard") M = M * 2;
 	MaidQuartersMaid.CurrentDialog = MaidQuartersMaid.CurrentDialog.replace("REPLACEMONEY", M.toString());
@@ -117,7 +118,7 @@ function MaidQuartersMiniGamePay() {
 function MaidQuartersRescuePay() {
 	MaidQuartersRemoveMaidUniform();
 	ReputationProgress("Maid", 4);
-	var M = 8 + Math.floor(Math.random() * 9);
+	var M = 10 + Math.floor(Math.random() * 11);
 	MaidQuartersMaid.CurrentDialog = MaidQuartersMaid.CurrentDialog.replace("REPLACEMONEY", M.toString());
 	CharacterChangeMoney(Player, M);
 }
@@ -172,6 +173,7 @@ function MaidQuartersBecomMaid() {
 // When the player becomes head maid
 function MaidQuartersBecomHeadMaid() {
 	MaidQuartersIsHeadMaid = true;
+	MaidQuartersMaid.AllowItem = true;
 	LogAdd("LeadSorority", "Maid");
 }
 
@@ -196,4 +198,9 @@ function MaidQuartersCancelRescue() {
 	if (MaidQuartersCurrentRescue == "ShibariDojo") { ShibariCompleteRescue(); ShibariTeacher.Stage = "0"; }
 	if (MaidQuartersCurrentRescue == "Shop") { ShopCompleteRescue(); ShopVendor.Stage = "0"; }
 	if (MaidQuartersCurrentRescue == "Gambling") { GamblingCompleteRescue(); GamblingFirstSub.Stage = "0"; }
+}
+
+// The player as head maid can trick the maids into freeing Sarah
+function MaidQuartersFreeSarah() {
+	SarahUnlock();
 }

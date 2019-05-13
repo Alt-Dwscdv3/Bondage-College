@@ -68,7 +68,7 @@ function DrawGetImage(Source) {
 			img.onload = function () {			
 				DrawCacheLoadedImages++;
 				if (DrawCacheLoadedImages == DrawCacheTotalImages)
-					CharacterLoadCanvasAll();				
+					CharacterLoadCanvasAll();
 			}			
 		}
     }
@@ -82,14 +82,14 @@ function DrawCharacter(C, X, Y, Zoom) {
 
 	// Make sure we have a character
 	if (C != null) 
-		if ((C.ID == 0) || (Player.Effect.indexOf("BlindHeavy") < 0)) {
+		if ((C.ID == 0) || (Player.Effect.indexOf("BlindHeavy") < 0) || (CurrentScreen == "InformationSheet")) {
 
 			// There's 2 different canvas, one blinking and one that doesn't
 			var seconds = new Date().getTime();
 			var Canvas = (Math.round(seconds / 400) % C.BlinkFactor == 0) ? C.CanvasBlink : C.Canvas;
 			
 			// If we must dark the Canvas characters
-			if ((C.ID != 0) && Player.IsBlind()) {
+			if ((C.ID != 0) && Player.IsBlind() && (CurrentScreen != "InformationSheet")) {
 				var CanvasH = document.createElement("canvas");
 				CanvasH.width = Canvas.width;
 				CanvasH.height = Canvas.height;
@@ -132,14 +132,17 @@ function DrawCharacter(C, X, Y, Zoom) {
 						DrawEmptyRect(C.FocusGroup.Zone[Z][0] + X, C.FocusGroup.Zone[Z][1] + Y - C.HeightModifier, C.FocusGroup.Zone[Z][2], C.FocusGroup.Zone[Z][3], "cyan");
 			
 			// Draw the character name below herself
-			if ((C.Name != "") && (CurrentModule == "Room")) 
-				if (!Player.IsBlind())
-					DrawText(C.Name, X + 255, Y + 980, "White", "Black");
-			
+			if ((C.Name != "") && ((CurrentModule == "Room") || (CurrentModule == "Online")) && (CurrentScreen != "Private")) 
+				if (!Player.IsBlind()) {
+					MainCanvas.font = "30px Arial";	
+					DrawText(C.Name, X + 255 * Zoom, Y + 980 * Zoom, "White", "Black");
+					MainCanvas.font = "36px Arial";
+				}
+
 		}
 
 }
-		
+
 // Draw a zoomed image from a source to a specific canvas
 function DrawImageZoomCanvas(Source, Canvas, SX, SY, SWidth, SHeight, X, Y, Width, Height) {
 	Canvas.drawImage(DrawGetImage(Source), SX, SY, Math.round(SWidth), Math.round(SHeight), X, Y, Width, Height);
@@ -182,8 +185,9 @@ function DrawImage(Source, X, Y) {
 function DrawImageCanvasColorize(Source, Canvas, X, Y, Zoom, HexColor, FullAlpha) {
 
 	// Make sure that the starting image is loaded
-	var Img = new Image();
-	Img.src = DrawGetImage(Source).src;
+	//var Img = new Image();
+	//Img.src = DrawGetImage(Source).src;
+	var Img = DrawGetImage(Source);
 	if ((Img != null) && (Img.width > 0)) {
 
 		// Prepares a canvas to draw the colorized image
@@ -207,7 +211,7 @@ function DrawImageCanvasColorize(Source, Canvas, X, Y, Zoom, HexColor, FullAlpha
 				data[p + 0] = rgbColor.r * trans;
 				data[p + 1] = rgbColor.g * trans;
 				data[p + 2] = rgbColor.b * trans;
-			}		
+			}
 		} else {
 			for(var p = 0, len = data.length; p < len; p+=4) {
 				trans = ((data[p] + data[p + 1] + data[p + 2]) / 383);
@@ -318,7 +322,7 @@ function DrawText(Text, X, Y, Color, BackColor) {
 }
 
 // Draw a button
-function DrawButton(Left, Top, Width, Height, Label, Color, Image) {
+function DrawButton(Left, Top, Width, Height, Label, Color, Image, HoveringText) {
 
 	// Draw the button rectangle (makes the background color cyan if the mouse is over it)
 	MainCanvas.beginPath();
@@ -331,10 +335,26 @@ function DrawButton(Left, Top, Width, Height, Label, Color, Image) {
 	MainCanvas.stroke();
 	MainCanvas.closePath();
 	
-	// Draw the text
+	// Draw the text or image
 	DrawText(Label, Left + Width / 2, Top + (Height / 2) + 1, "black");
 	if ((Image != null) && (Image != "")) DrawImage(Image, Left + 2, Top + 2);
 	
+	// Draw the hovering text
+	if ((HoveringText != null) && (MouseX >= Left) && (MouseX <= Left + Width) && (MouseY >= Top) && (MouseY <= Top + Height) && !CommonIsMobile) {
+		Left = (MouseX > 1000) ? Left - 475 : Left + 115;
+		Top = Top + 12;
+		MainCanvas.beginPath();
+		MainCanvas.rect(Left, Top, 450, 65);
+		MainCanvas.fillStyle = "#FFFF88"; 
+		MainCanvas.fillRect(Left, Top, 450, 65);
+		MainCanvas.fill();	
+		MainCanvas.lineWidth = '2';
+		MainCanvas.strokeStyle = 'black';
+		MainCanvas.stroke();
+		MainCanvas.closePath();
+		DrawTextFit(HoveringText, Left + 225, Top + 33, 444, "black");
+	}
+
 }
 
 // Draw a basic empty rectangle
@@ -416,32 +436,4 @@ function DrawItemPreview(X, Y, Item) {
 	DrawRect(X, Y, 225, 275, "white");
 	DrawImageResize("Assets/" + Item.Asset.Group.Family + "/" + Item.Asset.Group.Name + "/Preview/" + Item.Asset.Name + ".png", X + 2, Y + 2, 221, 221);
 	DrawTextFit(Item.Asset.Description, X + 110, Y + 250, 221, "black");
-}
-
-// Draw a regular HTML element at a specific position
-function DrawElementPosition(ElementID, X, Y, W) {
-	
-	// Different positions based on the width/height ratio
-	var Font;
-	var Height;
-	var Left;
-	var Width;
-	var Top;
-	if (DrawScreenWidth <= DrawScreenHeight * 2) {
-		Font = (DrawScreenWidth / 50);
-		Height = Font * 1.15;
-		Left = ((X - (W / 2)) * DrawScreenWidth / 2000);
-		Width = (W * DrawScreenWidth / 2000) - 18;
-		Top = (Y * DrawScreenWidth / 2000) + ((DrawScreenHeight * 2 - DrawScreenWidth) / 4) - (Height / 2);
-	} else {
-		Font = (DrawScreenHeight / 25);
-		Height = Font * 1.15;
-		Left = ((X - (W / 2)) * DrawScreenHeight / 1000) + (DrawScreenWidth - DrawScreenHeight * 2) / 2;
-		Width = (W * DrawScreenHeight / 1000) - 18;
-		Top = (Y * DrawScreenHeight / 1000) - (Height / 2);
-	}
-
-	// Sets the element style
-	document.getElementById(ElementID).setAttribute("style", "font-size:" + Font + "px; font-family:Arial; position:absolute; padding-left:10px; left:" + Left + "px; top:" + Top + "px; width:" + Width + "px; height:" + Height + "px;");
-	
 }

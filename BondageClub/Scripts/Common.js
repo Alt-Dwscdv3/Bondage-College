@@ -7,10 +7,12 @@ var KeyPress = "";
 var CurrentModule;
 var CurrentScreen;
 var CurrentCharacter = null;
+var CurrentTime = 0;
+var CurrentOnlinePlayers = 0;
 var CommonIsMobile = false;
-var CommonCurrentTimer = 0;
 var CommonRunInterval = 20;
 var CommonCSVCache = {};
+var CutsceneStage = 0;
 
 // Returns TRUE if the variable is a number
 function CommonIsNumeric(n) {
@@ -80,11 +82,11 @@ function CommonParseCSV(str) {
 }
 
 // Read a CSV file from the web site
-function CommonReadCSV(Array, Path, Screen, File, Language) {
+function CommonReadCSV(Array, Path, Screen, File) {
 	
     // Changed from a single path to various arguments and internally concatenate them
     // This ternary operator is used to keep backward compatibility
-    var FullPath = "Screens/" + Path + "/" + Screen + "/" + File + (((Language == null) || (Language == false)) ? "" : "_" + CommonGetWorkingLanguage()) + ".csv";    
+    var FullPath = "Screens/" + Path + "/" + Screen + "/" + File + ".csv";    
     if (CommonCSVCache[FullPath]) {
 		window[Array] = CommonCSVCache[FullPath];
         return;
@@ -99,12 +101,7 @@ function CommonReadCSV(Array, Path, Screen, File, Language) {
     });
 }
 
-// Returns a working language if translation isn't fully ready
-function CommonGetWorkingLanguage() {
-	return "EN";
-}
-
-// AJAX utility
+// AJAX utility to get a file and return it's content
 function CommonGet(Path, Callback) {
 	var xhr = new XMLHttpRequest();
     xhr.open("GET", Path);
@@ -179,7 +176,6 @@ function CommonDynamicFunctionParams(FunctionName) {
 	}
 
 }
-
 
 // Sets the current screen and calls the loading script if needed, only allow the change screen if the player can walk
 function CommonSetScreen(NewModule, NewScreen) {

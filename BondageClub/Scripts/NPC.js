@@ -8,6 +8,15 @@ var NPCTrait = [
 	["Serious", "Playful"],
 ]
 
+// Sets a specific trait for a NPC
+function NPCTraitSet(C, TraitName, TraitValue) {
+	var ReverseName = NPCTraitReverse(TraitName);
+	for(var T = 0; T < C.Trait.length; T++)
+		if ((C.Trait[T].Name == TraitName) || (C.Trait[T].Name == ReverseName))
+			C.Trait.splice(T, 1);
+	C.Trait.push({ Name: TraitName, Value: TraitValue });
+}
+
 // Generate random traits for a NPC (70% odds for each traits, can switch on both sides, strength is from 1 to 100)
 function NPCTraitGenerate(C) {
 	C.Trait = [];
@@ -74,9 +83,10 @@ function NPCTraitKeepBestOption(C, Group) {
 function NPCTraitDialog(C) {
 	
 	// For each dialog option
-	for(var D = 0; D < C.Dialog.length; D++)
-		if (C.Dialog[D].Group != null)
-			NPCTraitKeepBestOption(C, C.Dialog[D].Group)
+	for(var D = 0; D < C.Dialog.length; D++) {
+		if (C.Dialog[D].Group != null) NPCTraitKeepBestOption(C, C.Dialog[D].Group)
+		if (C.Dialog[D].Function != null) C.Dialog[D].Function = C.Dialog[D].Function.replace("MainHall", "");
+	}
 	
 }
 
@@ -91,4 +101,62 @@ function NPCTraitGet(C, TraitType) {
 	}
 	return 0;
 
+}
+
+// Adds a new event in the NPC log
+function NPCEventAdd(C, EventName, EventValue) {
+	if (C.Event == null) C.Event = [];
+	for(var E = 0; E < C.Event.length; E++)
+		if (C.Event[E].Name == EventName) {
+			C.Event[E].Value = EventValue;
+			return;
+		}
+	var NewEvent = {
+		Name: EventName,
+		Value: EventValue
+	}
+	C.Event.push(NewEvent);
+}
+
+// Deletes a NPC event from the log
+function NPCEventDelete(C, EventName) {
+	if (C.Event == null) C.Event = [];
+	for(var E = 0; E < C.Event.length; E++)
+		if (C.Event[E].Name == EventName)
+			C.Event.splice(E, 1);
+}
+
+// Returns the NPC event value (0 if the event isn't logged)
+function NPCEventGet(C, EventName) {
+	if (C.Event != null)
+		for(var E = 0; E < C.Event.length; E++)
+			if (C.Event[E].Name == EventName)
+				return C.Event[E].Value;
+	return 0;
+}
+
+// For longer events, the serious trait will dictate the time (1 day if playful, 3 days if nothing, 7 days if serious)
+function NPCLongEventDelay(C) {
+	var T = NPCTraitGet(C, "Serious");
+	if (T > 0) return 604800000;
+	if (T < 0) return 86400000;
+	return 259200000;
+}
+
+// Sets the love factor for an NPC
+function NPCLoveChange(C, LoveFactor) {
+	LoveFactor = parseInt(LoveFactor);
+	if (C.Love == null) C.Love = LoveFactor;
+	else C.Love = C.Love + LoveFactor;
+	if (C.Love < -100) C.Love = -100;
+	if (C.Love > 100) C.Love = 100;	
+}
+
+// Raises the love factor progressively with interaction time
+function NPCInteraction() {
+	if ((CurrentCharacter != null) && (CurrentCharacter.ID != 0))
+		if (CurrentTime >= NPCEventGet(CurrentCharacter, "LastInteraction")) {
+			NPCEventAdd(CurrentCharacter, "LastInteraction", CurrentTime + 20000);
+			if (CurrentCharacter.Love < 60) NPCLoveChange(CurrentCharacter, 1);
+		}
 }

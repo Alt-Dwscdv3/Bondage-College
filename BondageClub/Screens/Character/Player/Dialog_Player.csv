@@ -1,0 +1,94 @@
+SelectItem,,,Select an item to use
+CannotUseOnSelf,,,Cannot use on yourself
+RemoveClothesForItem,,,Remove some clothes first
+Cancel,,,Cancel
+Remove,,,Remove
+Struggle,,,Struggle
+Unlock,,,Unlock
+Swapping,,,Swapping...
+Struggling,,,Struggling...
+Unlocking,,,Unlocking...
+Removing,,,Removing...
+Locking,,,Locking...
+Adding,,,Adding...
+Impossible,,,Impossible to escape!
+CanStruggle,,,Struggle to free yourself
+CannotStruggle,,,You'll need help to get out
+CanUnlock,,,You can unlock yourself
+CannotUnlock,,,You cannot unlock yourself
+ZoneBlocked,,,This zone is out of reach from another item
+AccessBlocked,,,You cannot access your items
+ProgressClick,,,Click here to speed up the progress
+ProgressKeys,,,Alternate keys A and S to speed up
+PumpLevel0,,,Pump gag level: Empty
+PumpLevel1,,,Pump gag level: Light
+PumpLevel2,,,Pump gag level: Inflated
+PumpLevel3,,,Pump gag level: Bloated
+PumpLevel4,,,Pump gag level: Full mouth
+DeflateIt,,,Deflate it
+PumpIt,,,Pump it
+pumps,,,pumps
+deflates,,,deflates
+gag,,,gag
+SelectBondagePosition,,,Select the bondage position
+CannotUnlockIfElbowBound,,,A victim cannot unlock herself if her elbows are bound
+LeatherCuffsPoseNone,,,Detached
+LeatherCuffsPoseWrist,,,Bind wrists
+LeatherCuffsPoseElbow,,,Bind elbows
+LeatherCuffsPoseBoth,,,Bind both
+LeatherCuffsRestrainNone,,,SourceCharacter detaches the chain from DestinationCharacter's leather cuffs.
+LeatherCuffsRestrainWrist,,,SourceCharacter attaches the leather cuffs wrist chain behind DestinationCharacter's back.
+LeatherCuffsRestrainElbow,,,SourceCharacter attaches the leather cuffs elbow chain behind DestinationCharacter's back.
+LeatherCuffsRestrainBoth,,,SourceCharacter attaches the leather cuffs wrist and elbow chains behind DestinationCharacter's back.
+Intensity-1,,,Item intensity: Disabled
+Intensity0,,,Item intensity: Low
+Intensity1,,,Item intensity: Medium
+Intensity2,,,Item intensity: High
+Intensity3,,,Item intensity: Maximum
+Increase,,,Increase
+Decrease,,,Decrease
+ShockCollarShowChat,,,Show chat message
+ShockCollarSet0,,,SourceCharacter sets DestinationCharacter's shock collar to low intensity.
+ShockCollarSet1,,,SourceCharacter sets DestinationCharacter's shock collar to moderate intensity.
+ShockCollarSet2,,,SourceCharacter sets DestinationCharacter's shock collar to high intensity.
+ShockCollarTrigger0,,,DestinationCharacter's collar gives her a light shock.
+ShockCollarTrigger1,,,DestinationCharacter's collar lets out a sharp jolt!
+ShockCollarTrigger2,,,DestinationCharacter's collar delivers an intense shock!
+EggDecreaseTo-1,,,DestinationCharacter's vibrating egg stops vibrating.
+EggDecreaseTo0,,,DestinationCharacter's vibrating egg slows down into a light tease.
+EggDecreaseTo1,,,DestinationCharacter's vibrating egg returns to a moderate pace.
+EggDecreaseTo2,,,DestinationCharacter's vibrating egg slows down a tiny bit.
+EggIncreaseTo0,,,DestinationCharacter's vibrating egg starts teasing her lightly.
+EggIncreaseTo1,,,DestinationCharacter's vibrating egg builds up to a moderate pace.
+EggIncreaseTo2,,,DestinationCharacter's vibrating egg starts buzzing strongly!
+EggIncreaseTo3,,,DestinationCharacter's vibrating egg jumps up to maximum intensity!
+NippleDecreaseTo-1,,,DestinationCharacter's vibrating nipple clamps stops vibrating.
+NippleDecreaseTo0,,,DestinationCharacter's vibrating nipple clamps slows down into a light tease.
+NippleDecreaseTo1,,,DestinationCharacter's vibrating nipple clamps returns to a moderate pace.
+NippleDecreaseTo2,,,DestinationCharacter's vibrating nipple clamps slows down a tiny bit.
+NippleIncreaseTo0,,,DestinationCharacter's vibrating nipple clamps starts teasing her lightly.
+NippleIncreaseTo1,,,DestinationCharacter's vibrating nipple clamps builds up to a moderate pace.
+NippleIncreaseTo2,,,DestinationCharacter's vibrating nipple clamps starts buzzing strongly!
+NippleIncreaseTo3,,,DestinationCharacter's vibrating nipple clamps jumps up to maximum intensity!
+UseRemote,,,Use Remote
+PlayerGagged,,,(You can use or remove items by selecting specific body regions on yourself.)
+0,,,(You can use or remove items by selecting specific body regions on yourself.)
+ItemBreastLeatherWhip,,,(You clumsily whip your own breast and tummy.  It would be more painful if someone else did it.)
+ItemBreastLeatherCrop,,,(You swing the crop on yourself a few times.  You can feel your breast and tummy becoming more sensitive.)
+ItemPelvisLeatherWhip,,,(You need a few tries but you're able to somewhat whip your own butt and feel the pain.)
+ItemPelvisLeatherCrop,,,(You lash the leather crop pretty hard on your own butt.  Jumping from each good hit.)
+ItemVulvaVibratingWand,,,(You slowly massage your pussy with the wand.  Trembling from pleasure and excitement.)
+LockMittens,,,Padlock mitten buckles
+UnlockMittens,,,Unlock mittens
+AttachChain,,,Chain mittens
+RemoveChain,,,Unchain mittens
+NeedPadlock,,,You need some padlocks to do this.
+NeedPadlockKey,,,You need a padlock key to do this.
+padlocks,,,padlocks
+unlocks,,,unlocks
+mittens,,,mittens
+chains,,,chains
+unchains,,,removes the chains
+mittenstoharness,,,mittens to the baby harness
+mittensfromharness,,,mittens
+NeedHarness,,,They must be wearing a baby harness first to chain the mittens to it.

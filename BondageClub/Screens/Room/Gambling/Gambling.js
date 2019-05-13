@@ -16,6 +16,7 @@ var GamblingShowMoney = false;	//Show Money in DiceStack
 var GamblingAppearanceFirst = null;
 var GamblingAppearanceSecond = null;
 var GamblingAppearancePlayer = null;
+var GamblingIllegalChange = false; //Sub Player lost Cloth although forbidden by Mistress
 
 // Returns TRUE if a dialog is permitted
 function GamblingIsSubsRestrained() { return (GamblingFirstSub.IsRestrained() || !GamblingFirstSub.CanTalk() || GamblingSecondSub.IsRestrained() || !GamblingSecondSub.CanTalk());}
@@ -41,6 +42,7 @@ function GamblingLoad() {
 		GamblingAppearanceSecond = GamblingSecondSub.Appearance.slice();
 	}
 	GamblingAppearancePlayer = Player.Appearance.slice();
+	GamblingIllegalChange = false;
 	// Rescue mission load
 	if ((MaidQuartersCurrentRescue == "Gambling") && !MaidQuartersCurrentRescueStarted) {
 		MaidQuartersCurrentRescueStarted = true;
@@ -70,7 +72,7 @@ function GamblingRun() {
 	if ((ReputationGet("Gambling") > 20) || MaidQuartersCurrentRescue == "Gambling") DrawCharacter(GamblingSecondSub, 1250, 0, 1);
 	if (Player.CanWalk()) DrawButton(1885, 25, 90, 90, "", "White", "Icons/Exit.png");
 	DrawButton(1885, 145, 90, 90, "", "White", "Icons/Character.png");
-	if (Player.CanInteract()) DrawButton(1885, 265, 90, 90, "", "White", "Icons/Dress.png");
+	if (Player.CanInteract()) DrawButton(1885, 265, 90, 90, "", "White", "Icons/Dress.png"); //Only Dess Back after loose Game
 }
 
 // When the user clicks in the Gambling Hall
@@ -78,9 +80,21 @@ function GamblingClick() {
 	if ((MouseX >= 250) && (MouseX < 750) && (MouseY >= 0) && (MouseY < 1000)) CharacterSetCurrent(GamblingFirstSub);
 	if ((MouseX >= 750) && (MouseX < 1250) && (MouseY >= 0) && (MouseY < 1000)) CharacterSetCurrent(Player);
 	if (((MouseX >= 1250) && (MouseX < 1750) && (MouseY >= 0) && (MouseY < 1000)) && ((ReputationGet("Gambling") > 20) || MaidQuartersCurrentRescue == "Gambling") ) CharacterSetCurrent(GamblingSecondSub);
-	if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 25) && (MouseY < 115) && Player.CanWalk()) CommonSetScreen("Room", "MainHall");
+	if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 25) && (MouseY < 115) && Player.CanWalk()) GamblingLeaveRoom();
 	if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 145) && (MouseY < 235)) InformationSheetLoadCharacter(Player);
 	if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 265) && (MouseY < 355)) GamblingDressBackPlayer();
+}
+
+//If the Player Illegal Strip the Cloth send to Prison 
+function GamblingLeaveRoom(){
+/*	if (GamblingIllegalChange) {
+		InventoryWear(Player, "MetalCuffs", "ItemArms");
+		PrisonPlayerForIllegalChange = true;
+		PrisonPlayerBehindBars = true;
+		CommonSetScreen("Room", "Prison");
+	} else {*/
+		CommonSetScreen("Room", "MainHall");
+//	}
 }
 
 // Print the Stack of Dices and the Sum of Ponits and Player Money
@@ -155,14 +169,14 @@ function GamblingTwentyOneController(TwentyOneState) {
 	
 	if (TwentyOneState == "new"){
 		// Start a New Game
-		GamblingPlayerSubState = 0;
+		Player.Appearance = GamblingAppearancePlayer.slice();
+		GamblingFirstSub.Appearance = GamblingAppearanceFirst.slice();
+		GamblingPlayerSubState = GamblingDressingLevel(Player);
 		GamblingNpcSubState = 0;
 		PlayerDiceStack = [];
 		GamblingNpcDiceStack = [];
 		CharacterRelease(Player);
-		GamblingFirstSub.Appearance = GamblingAppearanceFirst.slice();
 		CharacterRefresh(GamblingFirstSub);
-		Player.Appearance = GamblingAppearancePlayer.slice();
 		CharacterRefresh(Player);
 
 		for (var i = 1; i <= 3; i++) {
@@ -319,13 +333,13 @@ function GamblingStreetRoissyController (StreetRoissyState){
 		GamblingShowDiceSum = false;
 		GamblingShowMoney = true;
 		GamblingMoneyBet = 0;
+		Player.Appearance = GamblingAppearancePlayer.slice();
+		GamblingSecondSub.Appearance = GamblingAppearanceSecond.slice();
 		GamblingPlayerSubState = 1;
-		GamblingNpcSubState = 1; 
+		GamblingNpcSubState = GamblingDressingLevel(Player) + 1;
 		PlayerDiceStack = [];
 		GamblingNpcDiceStack = [];
-		GamblingSecondSub.Appearance = GamblingAppearanceSecond.slice();
 		CharacterRefresh(GamblingSecondSub);
-		Player.Appearance = GamblingAppearancePlayer.slice();
 		CharacterRefresh(Player);
 		GamblingSecondSub.Stage = 200;
 	} else if (StreetRoissyState == "nextDice"){
@@ -412,13 +426,13 @@ function GamblingDaredSixController (DaredSixState){
 	if (DaredSixState == "new"){
 		GamblingShowMoney = true;
 		GamblingMoneyBet = 0;
-		GamblingPlayerSubState = 1;
+		Player.Appearance = GamblingAppearancePlayer.slice();
+		GamblingSecondSub.Appearance = GamblingAppearanceSecond.slice();
+		GamblingPlayerSubState = GamblingDressingLevel(Player) + 1;
 		GamblingNpcSubState = 1; 
 		PlayerDiceStack = [];
 		GamblingNpcDiceStack = [];
-		GamblingSecondSub.Appearance = GamblingAppearanceSecond.slice();
 		CharacterRefresh(GamblingSecondSub);
-		Player.Appearance = GamblingAppearancePlayer.slice();
 		CharacterRefresh(Player);
 		GamblingDaredSixController("add");
 	} else if (DaredSixState == "add"){
@@ -482,6 +496,16 @@ function GamblingDaredSixController (DaredSixState){
 		}
 	}		
 }	
+
+//get dressinglevel for Caracters
+function GamblingDressingLevel(C) {
+	if (CharacterIsNaked(C)) return 3;
+	if (CharacterIsInUnderwear(C)) return 2;
+	for (var I = 0; I < C.Appearance.length; I++)
+		if (C.Appearance[I].Asset.Group.Name == "Shoes")
+			return 0;
+	return 1;
+}
 
 // Strip or tied a caracter that lost a turn, return true if the last level reached
 function GamblingStripTied(gstCarachter, gstLevel){

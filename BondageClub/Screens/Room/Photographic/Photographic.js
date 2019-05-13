@@ -9,6 +9,7 @@ var PhotographicSubAppearance = null;
 var PhotographicStartInventory = false;
 var PhotographicSelectText = "";
 
+function PhotographicPlayerCanChangeCloth() {return Player.CanChange() && !Player.IsRestrained()}
 function PhotographicPlayerHatAvailable() {return PhotographicAppearanceAvailable(Player, "Hat");}
 function PhotographicPlayerGlovesAvailable() {return PhotographicAppearanceAvailable(Player, "Gloves");}
 function PhotographicPlayerClothAvailable() {return PhotographicAppearanceAvailable(Player, "Cloth");}
@@ -18,6 +19,7 @@ function PhotographicPlayerSocksAvailable() {return (PhotographicAppearanceAvail
 function PhotographicPlayerBraAvailable() {return (PhotographicAppearanceAvailable(Player, "Bra")&&!PhotographicAppearanceAvailable(Player, "Cloth"));}
 function PhotographicPlayerPantiesAvailable() {return (PhotographicAppearanceAvailable(Player, "Panties")&&!PhotographicAppearanceAvailable(Player, "Cloth")&&!PhotographicAppearanceAvailable(Player, "ClothLower"));}
 
+function PhotographicSubIsRestrained() {return PhotographicSub.IsRestrained()}
 function PhotographicSubHatAvailable() {return PhotographicAppearanceAvailable(PhotographicSub, "Hat");}
 function PhotographicSubGlovesAvailable() {return PhotographicAppearanceAvailable(PhotographicSub, "Gloves");}
 function PhotographicSubClothAvailable() {return PhotographicAppearanceAvailable(PhotographicSub, "Cloth");}
@@ -25,13 +27,14 @@ function PhotographicSubClothLowerAvailable() {return PhotographicAppearanceAvai
 function PhotographicSubShoesAvailable() {return PhotographicAppearanceAvailable(PhotographicSub, "Shoes");}
 function PhotographicSubSocksAvailable() {return (PhotographicAppearanceAvailable(PhotographicSub, "Socks")&&!PhotographicAppearanceAvailable(PhotographicSub, "Shoes"));}
 function PhotographicSubBraAvailable() {return (PhotographicAppearanceAvailable(PhotographicSub, "Bra")&&!PhotographicAppearanceAvailable(PhotographicSub, "Cloth"));}
-function PhotographicSubPantiesAvailable() {return (PhotographicAppearanceAvailable(PhotographicSub, "Panties")&&!PhotographicAppearanceAvailable(PhotographicSub, "Cloth")&&!PhotographicAppearanceAvailable(Player, "ClothLower"));}
-function PhotographicSubCanAskForPhoto() {return Player.CanTalk() && PhotographicSub.IsRestrained()}
+function PhotographicSubPantiesAvailable() {return (PhotographicAppearanceAvailable(PhotographicSub, "Panties")&&!PhotographicAppearanceAvailable(PhotographicSub, "Cloth")&&!PhotographicAppearanceAvailable(PhotographicSub, "ClothLower"));}
+function PhotographicSubCanAskForPhoto() {return Player.CanTalk() && !PhotographicSub.IsRestrained()}
 function PhotographicSubCanWinkForPhoto() {return !Player.CanTalk() && !PhotographicSub.IsRestrained()}
+function PhotographicSubCanKeel() {return PhotographicSub.CanKneel()}
 
 function PhotographicLoad() {
 	if (PhotographicSub == null) {
-		PhotographicSub =  CharacterLoadNPC("NPC_Photographic_Sub");
+		PhotographicSub = CharacterLoadNPC("NPC_Photographic_Sub");
 		PhotographicSubAppearance = PhotographicSub.Appearance.slice();
 		PhotographicSub.AllowItem = true;
 	}
@@ -45,8 +48,10 @@ function PhotographicRun() {
 		DrawCharacter(PhotographicSub, 750, 0, 1);
 		if (Player.CanWalk()) DrawButton(1885, 25, 90, 90, "", "White", "Icons/Exit.png");
 		DrawButton(1885, 145, 90, 90, "", "White", "Icons/Character.png");
-		if (Player.CanInteract()) DrawButton(1885, 265, 90, 90, "", "White", "Icons/Dress.png");
+		if (Player.CanChange()) DrawButton(1885, 265, 90, 90, "", "White", "Icons/Dress.png");
 		if (Player.CanInteract()) DrawButton(1885, 385, 90, 90, "", "White", "Screens/Room/Photographic/foto.png");
+		if (Player.CanKneel()) DrawButton(1885, 505, 90, 90, "", "White", "Icons/Kneel.png");
+
 	} else {//if (PhotographicStartInventory)
 		DrawCharacter(Player, 0, 0, 1);
 		DrawCharacter(PhotographicSub, 500, 0, 1);
@@ -79,8 +84,9 @@ function PhotographicClick() {
 		if ((MouseX >= 750) && (MouseX < 1250) && (MouseY >= 0) && (MouseY < 1000)) CharacterSetCurrent(PhotographicSub);
 		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 25) && (MouseY < 115) && Player.CanWalk()) CommonSetScreen("Room", "MainHall");
 		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 145) && (MouseY < 235)) InformationSheetLoadCharacter(Player);
-		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 265) && (MouseY < 355) && Player.CanInteract()) {CharacterAppearanceReturnRoom = "Photographic"; CommonSetScreen("Character", "Appearance");};//
+		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 265) && (MouseY < 355) && Player.CanChange()) {CharacterAppearanceReturnRoom = "Photographic"; CommonSetScreen("Character", "Appearance");};//
 		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 385) && (MouseY < 475) && Player.CanInteract()) PhotographicCanvasToPng(750);
+		if ((MouseX >= 1885) && (MouseX < 1975) && (MouseY >= 505) && (MouseY < 595)  && Player.CanKneel()) CharacterSetActivePose(Player, (Player.ActivePose == null) ? "Kneel" : null);
 	} else {//if (PhotographicStartInventory)
 		// The user can select a different body by clicking on the vendor
 		if (Player.FocusGroup.Category == "Item")
@@ -96,7 +102,12 @@ function PhotographicClick() {
 		for(var A = 0; A < Player.Inventory.length; A++)
 			if ((Player.Inventory[A] != null) && (Player.Inventory[A].Group != null) && (Player.Inventory[A].Group == Player.FocusGroup.Name)) {
 				if ((MouseX >= X) && (MouseX < X + 225) && (MouseY >= Y) && (MouseY < Y + 275)) {
-					InventoryWear(Player, Player.Inventory[A].Name, Player.Inventory[A].Group);
+					//NPC can't change locked Neck-Inventory
+					if (!(Player.Inventory[A].Group == "ItemNeck")) {
+						InventoryWear(Player, Player.Inventory[A].Name, Player.Inventory[A].Group);
+					} else if (!InventoryLocked(Player, Player.Inventory[A].Group)) {
+						InventoryWear(Player, Player.Inventory[A].Name, Player.Inventory[A].Group);
+					}
 				}
 				X = X + 250;
 				if (X > 1800) {
@@ -112,6 +123,7 @@ function PhotographicClick() {
 			Player.FocusGroup = null;
 			CharacterSetCurrent(PhotographicSub);
 			PhotographicSub.CurrentDialog = TextGet("MoreItem");
+			PhotographicBackground = "grey";
 		}
 
 	}
@@ -176,15 +188,20 @@ function PhotographicPlayerDressBack() {
 }
 
 function PhotographicSubDressBack() {
-	CharacterDress(Player, PhotographicPlayerAppearance);
+	CharacterDress(PhotographicSub, PhotographicSubAppearance);
 }
+
+function PhotographicSubChangePose() {
+	CharacterSetActivePose(PhotographicSub, (PhotographicSub.ActivePose == null) ? "Kneel" : null);
+}
+
 
 function PhotographicSubClothRemove(Group){
 	InventoryRemove(PhotographicSub, Group); 
 }
 
-//from shop
 function PhotographicStartInventoryPlayer(ItemGroup) {
+	PhotographicBackground = "greyDark";
 
 	// Finds the asset group to shop with
 	for (var A = 0; A < AssetGroup.length; A++)

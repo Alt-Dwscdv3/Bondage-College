@@ -2,6 +2,7 @@
 var Asset = [];
 var AssetGroup = [];
 var AssetCurrentGroup;
+var Pose = [];
 
 // Adds a new asset group to the main list
 function AssetGroupAdd(NewAssetFamily, NewAsset) {
@@ -48,8 +49,10 @@ function AssetAdd(NewAsset) {
 		Bonus: NewAsset.Bonus,
 		Block: NewAsset.Block,
 		Hide: NewAsset.Hide,
+		HideItem: NewAsset.HideItem,
 		Require: NewAsset.Require,
 		SetPose: NewAsset.SetPose,
+		AllowPose: NewAsset.AllowPose,
 		Value: (NewAsset.Value == null) ? 0 : NewAsset.Value,
 		Difficulty: (NewAsset.Difficulty == null) ? 0 : NewAsset.Difficulty,
 		SelfBondage: (NewAsset.SelfBondage == null) ? true : NewAsset.SelfBondage,
@@ -60,7 +63,8 @@ function AssetAdd(NewAsset) {
 		DrawingPriority: NewAsset.Priority,
 		HeightModifier: (NewAsset.Height == null) ? 0 : NewAsset.Height,
 		Alpha: NewAsset.Alpha,
-		Prerequisite: NewAsset.Prerequisite
+		Prerequisite: NewAsset.Prerequisite,
+		Extended: (NewAsset.Extended == null) ? false : NewAsset.Extended
 	}
 	Asset.push(A);
 }
@@ -91,6 +95,9 @@ function AssetBuildDescription(Family, CSV) {
 			}
 
 		}
+		
+	// Translates the descriptions to a foreign language
+	TranslationAsset(Family);
 
 }
 
@@ -98,7 +105,7 @@ function AssetBuildDescription(Family, CSV) {
 function AssetLoadDescription(Family) {
 
     // Finds the full path of the CSV file to use cache
-    var FullPath = "Assets/" + Family + "/" + Family + "_" + CommonGetWorkingLanguage() + ".csv";    
+    var FullPath = "Assets/" + Family + "/" + Family + ".csv";    
     if (CommonCSVCache[FullPath]) {
 		AssetBuildDescription(Family, CommonCSVCache[FullPath]);
         return;
@@ -144,4 +151,14 @@ function AssetLoadAll() {
 	Asset = [];
 	AssetGroup = [];
 	AssetLoad(AssetFemale3DCG, "Female3DCG");
+	Pose = PoseFemale3DCG;
+}
+
+// Make sure all the assets from a character are loaded properly
+function AssetReload(C) {
+	for(var A = 0; A < C.Appearance.length; A++)
+		if (C.Appearance[A].Asset != null)
+			for(var S = 0; S < Asset.length; S++)
+				if ((Asset[S].Name == C.Appearance[A].Asset.Name) && (Asset[S].Group.Name == C.Appearance[A].Asset.Group.Name))
+					C.Appearance[A].Asset = Asset[S];
 }

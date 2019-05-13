@@ -10,7 +10,6 @@ function CharacterReset(CharacterID, CharacterAssetFamily) {
 		Name: "",
 		AssetFamily: CharacterAssetFamily,
 		AccountName: "",
-		AccountPassword: "",
 		Owner: "",
 		Lover: "",
 		Money: 0,
@@ -26,19 +25,29 @@ function CharacterReset(CharacterID, CharacterAssetFamily) {
 		FocusGroup: null,
 		Canvas: null,
 		CanvasBlink: null,
+		MustDraw: false,
 		BlinkFactor: Math.round(Math.random() * 10) + 10,
 		AllowItem: true,
 		HeightModifier: 0,
 		CanTalk : function() { return ((this.Effect.indexOf("GagLight") < 0) && (this.Effect.indexOf("GagNormal") < 0) && (this.Effect.indexOf("GagHeavy") < 0) && (this.Effect.indexOf("GagTotal") < 0)) },
-		CanWalk : function() { return (this.Effect.indexOf("Freeze") < 0) },
+		CanWalk : function() { return ((this.Effect.indexOf("Freeze") < 0) && ((this.Pose == null) || (this.Pose.indexOf("Kneel") < 0))) },
+		CanKneel : function() { return ((this.Effect.indexOf("Freeze") < 0) && ((this.Pose == null) || (this.Pose.indexOf("LegsClosed") < 0))) },
 		CanInteract : function() { return (this.Effect.indexOf("Block") < 0) },
+		CanChange : function() { return ((this.Effect.indexOf("Freeze") < 0) && (this.Effect.indexOf("Block") < 0) && (this.Effect.indexOf("Prone") < 0) && !LogQuery("BlockChange", "Rule")) },
 		IsProne : function() { return (this.Effect.indexOf("Prone") >= 0) },
 		IsRestrained : function() { return ((this.Effect.indexOf("Freeze") >= 0) || (this.Effect.indexOf("Block") >= 0) || (this.Effect.indexOf("Prone") >= 0)) },
-		IsBlind : function() { return ((Player.Effect.indexOf("BlindLight") >= 0) || (Player.Effect.indexOf("BlindNormal") >= 0) || (Player.Effect.indexOf("BlindHeavy") >= 0)) },
+		IsBlind : function() { return ((this.Effect.indexOf("BlindLight") >= 0) || (this.Effect.indexOf("BlindNormal") >= 0) || (this.Effect.indexOf("BlindHeavy") >= 0)) },
+		IsEnclose :  function() { return (this.Effect.indexOf("Enclose") >= 0) },
 		IsChaste : function() { return ((this.Effect.indexOf("Chaste") >= 0) || (this.Effect.indexOf("BreastChaste") >= 0)) },
 		IsVulvaChaste : function() { return (this.Effect.indexOf("Chaste") >= 0) },
 		IsBreastChaste : function() { return (this.Effect.indexOf("BreastChaste") >= 0) },
-		IsOwned : function() { return ((this.Owner != null) && (this.Owner != "")) }
+		IsEgged : function() { return (this.Effect.indexOf("Egged") >= 0) },
+		IsOwned : function() { return ((this.Owner != null) && (this.Owner.trim() != "")) },
+		IsOwnedByPlayer : function() { return (((this.Owner != null) && (this.Owner.trim() == Player.Name)) || (NPCEventGet(this, "EndDomTrial") > 0)) },
+		IsOwner : function() { return ((NPCEventGet(this, "EndSubTrial") > 0) || (this.Name == Player.Owner.replace("NPC-", ""))) },
+		IsKneeling: function () { return ((this.Pose != null) && (this.Pose.indexOf("Kneel") >= 0)) },
+		IsNaked : function () { return CharacterIsNaked(this); },
+		HasNoItem : function () { return CharacterHasNoItem(this); }
 	}
 
 	// If the character doesn't exist, we create it
@@ -68,7 +77,14 @@ function CharacterRandomName(C) {
 	// If the name is already taken, we generate a new one
 	for (var CN = 0; CN < Character.length; CN++)
 		if ((Character[CN].Name == NewName) && (Character[CN].ID != C.ID)) {
-			CharacterRandomName(C)
+			CharacterRandomName(C);
+			return;
+		}
+
+	// If the name is already taken by a private room character
+	for (var P = 0; P < PrivateCharacter.length; P++)
+		if ((PrivateCharacter[P].Name == NewName) && ((PrivateCharacter[P].ID == null) || (PrivateCharacter[P].ID != C.ID))) {
+			CharacterRandomName(C);
 			return;
 		}
 
@@ -95,14 +111,17 @@ function CharacterBuildDialog(C, CSV) {
 			C.Dialog.push(D);
 
 		}
+		
+	// Translate the dialog if needed
+	TranslationDialog(C);
 
 }
 
 // Loads a CSV file to build the character dialog
-function CharacterLoadCSVDialog(C) {
+function CharacterLoadCSVDialog(C, Override) {
 
     // Finds the full path of the CSV file to use cache
-    var FullPath = ((C.ID == 0) ? "Screens/Character/Player/Dialog_Player" : "Screens/" + CurrentModule + "/" + CurrentScreen + "/Dialog_" + C.AccountName) + "_" + CommonGetWorkingLanguage() + ".csv";    
+    var FullPath = ((C.ID == 0) ? "Screens/Character/Player/Dialog_Player" : "Screens/" + CurrentModule + "/" + CurrentScreen + "/Dialog_" + ((Override == null) ? C.AccountName : Override)) + ".csv";    
     if (CommonCSVCache[FullPath]) {
 		CharacterBuildDialog(C, CommonCSVCache[FullPath]);
         return;
@@ -118,32 +137,36 @@ function CharacterLoadCSVDialog(C) {
 	
 }
 
-// Loads a wardrobe character from storage
-function CharacterLoadFromStorage(StorageName) {
-
-	// Checks if the NPC already exists and returns it if it's the case
-	for (var C = 0; C < Character.length; C++)
-		if (Character[C].AccountName == "Template-" + StorageName)
-			return Character[C];
-		
-	// Gets the character from storage
-	CharacterReset(Character.length, "Female3DCG");
-	C = Character[Character.length - 1];
-	C.AccountName = "Template-" + StorageName;
-	CharacterAppearanceBuildAssets(C);
+// Sets the clothes based on a character archetype
+function CharacterArchetypeClothes(C, Archetype, ForceColor) {
 	
-	// If there's a saved version, we take it, if not we randomize the slot
-	var App = JSON.parse(localStorage.getItem(StorageName));
-	if (App != null) {
-		C.Appearance = [];
-		for(var A = 0; A < App.length; A++)
-			if ((App[A].Asset != null) && (App[A].Asset.Group.Category == "Appearance"))
-				if ((App[A].Asset.Value == 0) || InventoryAvailable(Player, App[A].Asset.Name, App[A].Asset.Group.Name))
-					C.Appearance.push(App[A]);
+	// Maid archetype
+	if (Archetype == "Maid") {
+		InventoryAdd(C, "MaidOutfit1", "Cloth", false);
+		CharacterAppearanceSetItem(C, "Cloth", C.Inventory[C.Inventory.length - 1].Asset);
+		CharacterAppearanceSetColorForGroup(C, "Default", "Cloth");
+		InventoryAdd(C, "MaidHairband1", "Hat", false);
+		CharacterAppearanceSetItem(C, "Hat", C.Inventory[C.Inventory.length - 1].Asset);
+		CharacterAppearanceSetColorForGroup(C, "Default", "Hat");
+		C.AllowItem = (LogQuery("LeadSorority", "Maid"));
 	}
-	else
-		CharacterAppearanceFullRandom(C);
-	return C;
+
+	// Mistress archetype
+	if (Archetype == "Mistress") {
+		var ColorList = ["#333333", "#AA4444", "#AAAAAA"];
+		var Color = (ForceColor == null) ? CommonRandomItemFromList("", ColorList) : ForceColor;
+		CharacterAppearanceSetItem(C, "Hat", null);
+		InventoryAdd(C, "MistressGloves", "Gloves", false);
+		InventoryWear(C, "MistressGloves", "Gloves", Color);
+		InventoryAdd(C, "MistressBoots", "Shoes", false);
+		InventoryWear(C, "MistressBoots", "Shoes", Color);
+		InventoryAdd(C, "MistressTop", "Cloth", false);
+		InventoryWear(C, "MistressTop", "Cloth", Color);
+		InventoryAdd(C, "MistressBottom", "ClothLower", false);
+		InventoryWear(C, "MistressBottom", "ClothLower", Color);
+		InventoryAdd(C, "MetalChastityBeltKey", "ItemPelvis", false);
+		InventoryAdd(C, "MetalChastityBraKey", "ItemBreast", false);
+	}
 
 }
 
@@ -163,34 +186,82 @@ function CharacterLoadNPC(NPCType) {
 	CharacterRandomName(C);
 	CharacterAppearanceBuildAssets(C);
 	CharacterAppearanceFullRandom(C);
-	
-	// Maid archetype
-	if (NPCType.indexOf("Maid") >= 0) {
-		InventoryAdd(C, "MaidOutfit1", "Cloth");
-		CharacterAppearanceSetItem(C, "Cloth", C.Inventory[C.Inventory.length - 1].Asset);
-		CharacterAppearanceSetColorForGroup(C, "Default", "Cloth");
-		InventoryAdd(C, "MaidHairband1", "Hat");
-		CharacterAppearanceSetItem(C, "Hat", C.Inventory[C.Inventory.length - 1].Asset);
-		CharacterAppearanceSetColorForGroup(C, "Default", "Hat");
-		C.AllowItem = (LogQuery("LeadSorority", "Maid"));
-	}
 
-	// Mistress archetype
-	if (NPCType.indexOf("Mistress") >= 0) {
-		var ColorList = ["#333333", "#AA4444", "#AAAAAA"];
-		var Color = CommonRandomItemFromList("", ColorList);
-		CharacterAppearanceSetItem(C, "Hat", null);
-		InventoryAdd(C, "MistressGloves", "Gloves");
-		CharacterAppearanceSetItem(C, "Gloves", C.Inventory[C.Inventory.length - 1].Asset);
-		CharacterAppearanceSetColorForGroup(C, Color, "Gloves");
-		InventoryAdd(C, "MistressBoots", "Shoes");
-		CharacterAppearanceSetItem(C, "Shoes", C.Inventory[C.Inventory.length - 1].Asset);
-		CharacterAppearanceSetColorForGroup(C, Color, "Shoes");
-	}
-	
+	// Sets archetype clothes
+	if (NPCType.indexOf("Maid") >= 0) CharacterArchetypeClothes(C, "Maid");
+	if (NPCType.indexOf("Mistress") >= 0) CharacterArchetypeClothes(C, "Mistress");
+
 	// Returns the new character
 	return C;
 	
+}
+
+// Sets up the online character
+function CharacterOnlineRefresh(Char, data) {
+	Char.ActivePose = data.ActivePose;
+	Char.Reputation = (data.Reputation != null) ? data.Reputation : [];
+	Char.Appearance = ServerAppearanceLoadFromBundle("Female3DCG", data.Appearance);
+	AssetReload(Char);
+	CharacterLoadEffect(Char);
+	Char.AllowItem = ((Char.ID == 0) || Char.IsRestrained() || !Char.CanTalk() || (ReputationGet("Dominant") + 25 >= ReputationCharacterGet(Char, "Dominant")));
+	CharacterRefresh(Char);
+}
+
+// Loads an online character
+function CharacterLoadOnline(data) {
+
+	// Checks if the NPC already exists and returns it if it's the case
+	var Char = null;	
+	if (data.ID.toString() == Player.OnlineID)
+		Char = Player;
+	else
+		for (var C = 0; C < Character.length; C++)
+			if (Character[C].AccountName == "Online-" + data.ID.toString())
+				Char = Character[C];
+
+	// If the character isn't found
+	if (Char == null) {
+		
+		// Creates the new character from the online template
+		CharacterReset(Character.length, "Female3DCG");
+		Char = Character[Character.length - 1];
+		Char.Name = data.Name;
+		Char.Lover = (data.Lover != null) ? data.Lover : "";
+		Char.Owner = (data.Owner != null) ? data.Owner : "";
+		Char.AccountName = "Online-" + data.ID.toString();
+		CharacterLoadCSVDialog(Char, "Online");
+		CharacterOnlineRefresh(Char, data);
+
+	} else {
+		
+		// Flags "refresh" if we need to redraw the character 
+		var Refresh = false;
+		if ((Char.ActivePose != data.ActivePose) || (ChatRoomData == null) || (ChatRoomData.Character == null))
+			Refresh = true;
+		else
+			for (var C = 0; C < ChatRoomData.Character.length; C++)
+				if (ChatRoomData.Character[C].ID == data.ID)
+					if (ChatRoomData.Character[C].Appearance.length != data.Appearance.length)
+						Refresh = true;
+					else 
+						for (var A = 0; A < data.Appearance.length; A++)
+							if ((data.Appearance[A].Name != ChatRoomData.Character[C].Appearance[A].Name) || (data.Appearance[A].Group != ChatRoomData.Character[C].Appearance[A].Group))
+								Refresh = true;
+							else
+								if ((data.Appearance[A].Property != null) && (ChatRoomData.Character[C].Appearance[A].Property != null) && (JSON.stringify(data.Appearance[A].Property) != JSON.stringify(ChatRoomData.Character[C].Appearance[A].Property)))
+									Refresh = true;
+								else 
+									if (((data.Appearance[A].Property != null) && (ChatRoomData.Character[C].Appearance[A].Property == null)) || ((data.Appearance[A].Property == null) && (ChatRoomData.Character[C].Appearance[A].Property != null)))
+										Refresh = true;
+
+		// If we must refresh
+		if (Refresh) CharacterOnlineRefresh(Char, data);
+
+	}
+
+	// Returns the character
+	return Char;
+
 }
 
 // Deletes an NPC from the buffer
@@ -212,12 +283,16 @@ function CharacterAddPose(C, NewPose) {
 // Resets the current pose list on a character
 function CharacterLoadPose(C) {	
 	C.Pose = [];
+	if (C.ActivePose != null) C.Pose.push(C.ActivePose);
 	for (var A = 0; A < C.Appearance.length; A++) {
-		if (C.Appearance[A].Asset.SetPose != null)
-			CharacterAddPose(C, C.Appearance[A].Asset.SetPose);
+		if ((C.Appearance[A].Property != null) && (C.Appearance[A].Property.SetPose != null))
+			CharacterAddPose(C, C.Appearance[A].Property.SetPose);
 		else
-			if (C.Appearance[A].Asset.Group.SetPose != null)
-				CharacterAddPose(C, C.Appearance[A].Asset.Group.SetPose);
+			if (C.Appearance[A].Asset.SetPose != null)
+				CharacterAddPose(C, C.Appearance[A].Asset.SetPose);
+			else
+				if (C.Appearance[A].Asset.Group.SetPose != null)
+					CharacterAddPose(C, C.Appearance[A].Asset.Group.SetPose);
 	}	
 }
 
@@ -229,14 +304,17 @@ function CharacterAddEffect(C, NewEffect) {
 }
 
 // Resets the current effect list on a character
-function CharacterLoadEffect(C) {	
+function CharacterLoadEffect(C) {
 	C.Effect = [];
 	for (var A = 0; A < C.Appearance.length; A++) {
-		if (C.Appearance[A].Asset.Effect != null)
-			CharacterAddEffect(C, C.Appearance[A].Asset.Effect);
+		if ((C.Appearance[A].Property != null) && (C.Appearance[A].Property.Effect != null))
+			CharacterAddEffect(C, C.Appearance[A].Property.Effect);
 		else
-			if (C.Appearance[A].Asset.Group.Effect != null)
-				CharacterAddEffect(C, C.Appearance[A].Asset.Group.Effect);
+			if (C.Appearance[A].Asset.Effect != null)
+				CharacterAddEffect(C, C.Appearance[A].Asset.Effect);
+			else
+				if (C.Appearance[A].Asset.Group.Effect != null)
+					CharacterAddEffect(C, C.Appearance[A].Asset.Group.Effect);
 	}	
 }
 
@@ -254,8 +332,14 @@ function CharacterLoadCanvas(C) {
 	// Sets the total height modifier for that character
 	C.HeightModifier = 0;
 	for (var A = 0; A < C.Appearance.length; A++)
-		C.HeightModifier = C.HeightModifier + C.Appearance[A].Asset.HeightModifier;
-	
+		C.HeightModifier = C.HeightModifier + C.Appearance[A].Asset.HeightModifier;	
+	if (C.Pose != null)
+		for (var A = 0; A < C.Pose.length; A++)
+			for (var P = 0; P < Pose.length; P++)
+				if (Pose[P].Name == C.Pose[A])
+					if (Pose[P].OverrideHeight != null)
+						C.HeightModifier = Pose[P].OverrideHeight;
+
 	// Reload the canvas
 	CharacterAppearanceBuildCanvas(C);
 
@@ -264,7 +348,10 @@ function CharacterLoadCanvas(C) {
 // Reload all characters canvas
 function CharacterLoadCanvasAll() {
 	for (var C = 0; C < Character.length; C++)
-		CharacterLoadCanvas(Character[C]);
+		if (Character[C].MustDraw) {
+			CharacterLoadCanvas(Character[C]);
+			Character[C].MustDraw = false;
+		}
 }
 
 // Sets the current character for conversation with introduction
@@ -278,30 +365,77 @@ function CharacterSetCurrent(C) {
 // Changes the character money and sync with the account server
 function CharacterChangeMoney(C, Value) {
 	C.Money = parseInt(C.Money) + parseInt(Value) * ((Value > 0) ? CheatFactor("DoubleMoney", 2) : 1);
-	AccountSync();
+	ServerPlayerSync();
 }
 
 // Refreshes the character parameters
-function CharacterRefresh(C) {	
+function CharacterRefresh(C, Push) {
 	CharacterLoadEffect(C);
 	CharacterLoadPose(C);	
 	CharacterLoadCanvas(C);
-	if (CurrentModule != "Character") CharacterAppearanceSave(C);
+	if ((CurrentModule != "Character") && (C.ID == 0) && ((Push == null) || (Push == true))) ServerPlayerAppearanceSync();
+}
+
+// Returns TRUE if a character has no item
+function CharacterHasNoItem(C) {
+	for(var A = 0; A < C.Appearance.length; A++)
+		if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Category == "Item"))
+			return false;
+	return true;
+}
+
+// Returns TRUE if a character is naked
+function CharacterIsNaked(C) {
+	for(var A = 0; A < C.Appearance.length; A++)
+		if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Category == "Appearance") && C.Appearance[A].Asset.Group.AllowNone && !C.Appearance[A].Asset.Group.KeepNaked) 
+			return false;
+	return true;
+}
+
+// Returns TRUE if a character is in her underwear
+function CharacterIsInUnderwear(C) {
+	for(var A = 0; A < C.Appearance.length; A++)
+		if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Category == "Appearance") && C.Appearance[A].Asset.Group.AllowNone && !C.Appearance[A].Asset.Group.KeepNaked && !C.Appearance[A].Asset.Group.Underwear)
+			return false;
+	return true;
 }
 
 // Removes all appearance items from the character
 function CharacterNaked(C) {
 	CharacterAppearanceNaked(C);
+	AssetReload(C);
+	C.Appearance = CharacterAppearanceSort(C.Appearance);
 	CharacterRefresh(C);
 }
 
-// Removes all appearance items from the character
-function CharacterIsNaked(C) {
-	for(var A = 0; A < C.Appearance.length; A++) {
-		if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Category == "Appearance") && C.Appearance[A].Asset.Group.AllowNone && !C.Appearance[A].Asset.Group.KeepNaked) return false;
-		if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Name == "ItemPelvis")) return false;
-	}
-	return true;
+// Dress the character in random underwear
+function CharacterRandomUnderwear(C) {
+
+	// Clear the current clothes
+	for (var A = 0; A < C.Appearance.length; A++)
+		if ((C.Appearance[A].Asset.Group.Category == "Appearance") && C.Appearance[A].Asset.Group.AllowNone) {
+			C.Appearance.splice(A, 1);
+			A--;
+		}
+
+	// Generate random undies at a random color
+	var Color = "";
+	for(var A = 0; A < AssetGroup.length; A++)
+		if ((AssetGroup[A].Category == "Appearance") && AssetGroup[A].Underwear && (AssetGroup[A].IsDefault || (Math.random() < 0.2))) {
+			var Group = [];
+			if (Color == "") Color = CommonRandomItemFromList("", AssetGroup[A].ColorSchema);
+			for(var I = 0; I < Asset.length; I++)
+				if ((Asset[I].Group.Name == AssetGroup[A].Name) && ((Asset[I].Value == 0) || InventoryAvailable(C, Asset[I].Name, Asset[I].Group.Name)))
+					Group.push(Asset[I]);
+			if (Group.length > 0)
+				CharacterAppearanceSetItem(C, AssetGroup[A].Name, Group[Math.floor(Group.length * Math.random())], Color);
+		}
+
+	// Refreshes the character
+	AssetReload(C);
+	C.Appearance = CharacterAppearanceSort(C.Appearance);
+	CharacterRefresh(C);
+
 }
 
 // Removes all appearance items from the character expect underwear
@@ -310,18 +444,22 @@ function CharacterUnderwear(C, Appearance) {
 	for(var A = 0; A < Appearance.length; A++)
 		if ((Appearance[A].Asset != null) && Appearance[A].Asset.Group.Underwear && (Appearance[A].Asset.Group.Category == "Appearance"))
 			C.Appearance.push(Appearance[A]);
+	AssetReload(C);
 	C.Appearance = CharacterAppearanceSort(C.Appearance);
 	CharacterRefresh(C);
 }
 
 // Redress the character based on a specific appearance object
 function CharacterDress(C, Appearance) {
-	for(var A = 0; A < Appearance.length; A++)
-		if ((Appearance[A].Asset != null) && (Appearance[A].Asset.Group.Category == "Appearance"))
-			if (InventoryGet(C, Appearance[A].Asset.Group.Name) == null)
-				C.Appearance.push(Appearance[A]);
-	C.Appearance = CharacterAppearanceSort(C.Appearance);
-	CharacterRefresh(C);
+	if ((Appearance != null) && (Appearance.length > 0)) {
+		for(var A = 0; A < Appearance.length; A++)
+			if ((Appearance[A].Asset != null) && (Appearance[A].Asset.Group.Category == "Appearance"))
+				if (InventoryGet(C, Appearance[A].Asset.Group.Name) == null)
+					C.Appearance.push(Appearance[A]);
+		AssetReload(C);
+		C.Appearance = CharacterAppearanceSort(C.Appearance);
+		CharacterRefresh(C);
+	}
 }
 
 // Removes any binding item from the character
@@ -356,13 +494,19 @@ function CharacterFullRandomRestrain(C, Ratio) {
 		if (Ratio.trim().toUpperCase() == "LOT") { RatioRare = 0.5; RatioNormal = 0; }
 		if (Ratio.trim().toUpperCase() == "ALL") { RatioRare = 0; RatioNormal = 0; }
 	}
-	
+
 	// Apply each item if needed
 	if (InventoryGet(C, "ItemArms") == null) InventoryWearRandom(C, "ItemArms");
 	if ((Math.random() >= RatioRare) && (InventoryGet(C, "ItemHead") == null)) InventoryWearRandom(C, "ItemHead");
 	if ((Math.random() >= RatioNormal) && (InventoryGet(C, "ItemMouth") == null)) InventoryWearRandom(C, "ItemMouth");
 	if ((Math.random() >= RatioRare) && (InventoryGet(C, "ItemNeck") == null)) InventoryWearRandom(C, "ItemNeck");
 	if ((Math.random() >= RatioNormal) && (InventoryGet(C, "ItemLegs") == null)) InventoryWearRandom(C, "ItemLegs");
-	if ((Math.random() >= RatioNormal) && (InventoryGet(C, "ItemFeet") == null)) InventoryWearRandom(C, "ItemFeet");
+	if ((Math.random() >= RatioNormal) && !C.IsKneeling() && (InventoryGet(C, "ItemFeet") == null)) InventoryWearRandom(C, "ItemFeet");
 
+}
+
+// Sets a new pose for the character
+function CharacterSetActivePose(C, NewPose) {
+	C.ActivePose = NewPose;
+	CharacterRefresh(C, false);
 }

@@ -30,10 +30,9 @@
 
 <script src="Scripts/Common.js"></script>
 <script src="Scripts/Drawing.js"></script>
-<script src="Scripts/Log.js"></script>
+<script src="Scripts/GameLog.js"></script>
 <script src="Scripts/Reputation.js"></script>
 <script src="Scripts/Skill.js"></script>
-<script src="Scripts/Account.js"></script>
 <script src="Scripts/Character.js"></script>
 <script src="Scripts/CharacterName.js"></script>
 <script src="Scripts/Dialog.js"></script>
@@ -43,6 +42,10 @@
 <script src="Scripts/Asset.js"></script>
 <script src="Scripts/MiniGame.js"></script>
 <script src="Scripts/NPC.js"></script>
+<script src="Scripts/Server.js"></script>
+<script src="Scripts/Element.js"></script>
+<script src="Scripts/Translation.js"></script>
+<script src="Scripts/socket.io/socket.io.js"></script>
 <script src="Assets/Female3DCG/Female3DCG.js"></script>
 <script src="Screens/Character/Login/Login.js"></script>
 <script src="Screens/Character/Appearance/Appearance.js"></script>
@@ -50,6 +53,7 @@
 <script src="Screens/Character/InformationSheet/InformationSheet.js"></script>
 <script src="Screens/Character/Wardrobe/Wardrobe.js"></script>
 <script src="Screens/Character/Cheat/Cheat.js"></script>
+<script src="Screens/Character/PasswordReset/PasswordReset.js"></script>
 <script src="Screens/Room/MainHall/MainHall.js"></script>
 <script src="Screens/Room/Shop/Shop.js"></script>
 <script src="Screens/Room/Introduction/Introduction.js"></script>
@@ -64,36 +68,77 @@
 <script src="Screens/Room/Prison/Prison.js"></script>
 <script src="Screens/Room/Photographic/Photographic.js"></script>
 <script src="Screens/Room/Stable/Stable.js"></script>
+<script src="Screens/Room/Sarah/Sarah.js"></script>
+<script src="Screens/Room/Magic/Magic.js"></script>
+<script src="Screens/MiniGame/HorseWalk/HorseWalk.js"></script>
 <script src="Screens/MiniGame/Kidnap/Kidnap.js"></script>
 <script src="Screens/MiniGame/MaidDrinks/MaidDrinks.js"></script>
 <script src="Screens/MiniGame/MaidCleaning/MaidCleaning.js"></script>
+<script src="Screens/Cutscene/PlayerCollaring/PlayerCollaring.js"></script>
+<script src="Screens/Cutscene/PlayerMistress/PlayerMistress.js"></script>
+<script src="Screens/Cutscene/NPCCollaring/NPCCollaring.js"></script>
+<script src="Screens/Cutscene/SarahIntro/SarahIntro.js"></script>
+<script src="Screens/Online/ChatSearch/ChatSearch.js"></script>
+<script src="Screens/Online/ChatCreate/ChatCreate.js"></script>
+<script src="Screens/Online/ChatRoom/ChatRoom.js"></script>
+<script src="Screens/Inventory/ItemMouth/PumpGag/PumpGag.js"></script>
+<script src="Screens/Inventory/ItemArms/LeatherCuffs/LeatherCuffs.js"></script>
+<script src="Screens/Inventory/ItemVulva/VibratingEgg/VibratingEgg.js"></script>
+<script src="Screens/Inventory/ItemNipples/VibeNippleClamp/VibeNippleClamp.js"></script>
+<script src="Screens/Inventory/ItemNeck/ShockCollar/ShockCollar.js"></script>
+<script src="Screens/Inventory/ItemArms/PaddedMittens/PaddedMittens.js"></script>
+<script src="Screens/Inventory/ItemArms/PaddedMittensLocked/PaddedMittensLocked.js"></script>
+<script src="Screens/Inventory/ItemArms/PaddedMittensHarness/PaddedMittensHarness.js"></script>
+<script src="Screens/Inventory/ItemArms/PaddedMittensHarnessLocked/PaddedMittensHarnessLocked.js"></script>
 <script>
 
-/*window.onerror = function (message, url, lineNo){
-    console.log('Error: ' + message + '\n' + 'Line Number: ' + lineNo);
-	CharacterLoginMessage = 'Error: ' + message + '\n' + 'Line Number: ' + lineNo;
-    return true;
-}*/
+/*
+
+	TO DO
+	Sophie - player dominant path
+	Have a "next page" for item category
+	Import Patreons
+	
+	Explain new stuff:
+	Sophie (3 ways to bring her to your room)
+	Image optimization
+	Password reset
+	/dice
+	/coin
+	* for emotes
+	Ban from chat rooms
+	Chat room max size
+	
+	Credit wildsj - Lots of Lingerie & Nursery
+	Credit git4nick - Magic Theater
+	Credit Lucritius - Shock Collar, New nipples region, Vibrating Egg
+	Credit Adokilume for German translation
+	
+*/
 
 // When the code is loaded, we start the game engine
 window.onload = function() {
 	//CheatImport();
+	ServerURL = "https://bondage-club-server.herokuapp.com/";
 	CommonIsMobile = CommonDetectMobile();
+	TranslationLoad();
 	DrawLoad();
 	AssetLoadAll();
 	CommonSetScreen("Character", "Login");
+	ServerInit();
 	MainRun();
 };
 
-// Main game running state, runs the drawing and account functions
+// Main game running state, runs the drawing
 function MainRun() {
 	DrawProcess();
-	AccountProcess();
+	CurrentTime = CurrentTime + CommonRunInterval;
 	setTimeout(MainRun, CommonRunInterval);
 }
 
 // When the user presses a key, we send the KeyDown event to the current screen if it can accept it
 function KeyDown(event) {
+	if (event.repeat) return;
 	KeyPress = event.keyCode || event.which;
 	CommonKeyDown();
 }
